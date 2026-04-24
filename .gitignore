@@ -21,9 +21,8 @@ venv/
 # Keep the data directory, including tracked benchmark datasets
 noisy_mnist_asad/data/MNIST/raw/*.bin
 
-# Keep cache metadata if useful, but ignore the huge generated arrays
-noisy_mnist_asad/data/infimnist_cache_2e7/*
-!noisy_mnist_asad/data/infimnist_cache_2e7/metadata.json
+# Ignore the generated Infimnist cache
+noisy_mnist_asad/data/infimnist_cache_2e7/
 
 # Generated experiment outputs
 noisy_mnist_asad/results/
