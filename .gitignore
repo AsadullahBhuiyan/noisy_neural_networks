@@ -19,19 +19,19 @@ venv/
 *.swo
 
 # Keep the data directory, including tracked benchmark datasets
-noisy_mnist/data/MNIST/raw/*.bin
+noisy_mnist_asad/data/MNIST/raw/*.bin
 
 # Keep cache metadata if useful, but ignore the huge generated arrays
-noisy_mnist/data/infimnist_cache_2e7/*
-!noisy_mnist/data/infimnist_cache_2e7/metadata.json
+noisy_mnist_asad/data/infimnist_cache_2e7/*
+!noisy_mnist_asad/data/infimnist_cache_2e7/metadata.json
 
 # Generated experiment outputs
-noisy_mnist/results/
-noisy_mnist/phase_diagram_2d/latest.json
-noisy_mnist/phase_diagram_2d/phase2d_*/
-noisy_mnist/phase_diagram_2d/phase2d_mnist_*/
-noisy_mnist/phase_diagram_2d_adam/latest.json
-noisy_mnist/phase_diagram_2d_adam/phase2d_adam_*/
+noisy_mnist_asad/results/
+noisy_mnist_asad/phase_diagram_2d/latest.json
+noisy_mnist_asad/phase_diagram_2d/phase2d_*/
+noisy_mnist_asad/phase_diagram_2d/phase2d_mnist_*/
+noisy_mnist_asad/phase_diagram_2d_adam/latest.json
+noisy_mnist_asad/phase_diagram_2d_adam/phase2d_adam_*/
 
 # LaTeX build artifacts; keep sources
 *.aux
@@ -42,7 +42,7 @@ noisy_mnist/phase_diagram_2d_adam/phase2d_adam_*/
 *.synctex.gz
 
 # Vendored infimnist local build products
-noisy_mnist/infimnist_py/build/
-noisy_mnist/infimnist_py/_infimnist.cpython-*.so
-noisy_mnist/infimnist_py/data
-noisy_mnist/infimnist_py/.git
+noisy_mnist_asad/infimnist_py/build/
+noisy_mnist_asad/infimnist_py/_infimnist.cpython-*.so
+noisy_mnist_asad/infimnist_py/data
+noisy_mnist_asad/infimnist_py/.git
