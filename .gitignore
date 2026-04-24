@@ -18,9 +18,7 @@ venv/
 *.swp
 *.swo
 
-# Keep the data directory, but skip downloaded/raw dataset mirrors
-noisy_mnist/data/MNIST/
-noisy_mnist/data/KMNIST/
+# Keep the data directory, including tracked benchmark datasets
 noisy_mnist/data/MNIST/raw/*.bin
 
 # Keep cache metadata if useful, but ignore the huge generated arrays
