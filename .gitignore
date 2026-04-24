@@ -1,0 +1,50 @@
+.codex
+
+# Python caches and local build artifacts
+__pycache__/
+*.py[cod]
+*.so
+build/
+dist/
+*.egg-info/
+
+# Common local tooling noise
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+.DS_Store
+*.swp
+*.swo
+
+# Keep the data directory, but skip downloaded/raw dataset mirrors
+noisy_mnist/data/MNIST/
+noisy_mnist/data/KMNIST/
+noisy_mnist/data/MNIST/raw/*.bin
+
+# Keep cache metadata if useful, but ignore the huge generated arrays
+noisy_mnist/data/infimnist_cache_2e7/*
+!noisy_mnist/data/infimnist_cache_2e7/metadata.json
+
+# Generated experiment outputs
+noisy_mnist/results/
+noisy_mnist/phase_diagram_2d/latest.json
+noisy_mnist/phase_diagram_2d/phase2d_*/
+noisy_mnist/phase_diagram_2d/phase2d_mnist_*/
+noisy_mnist/phase_diagram_2d_adam/latest.json
+noisy_mnist/phase_diagram_2d_adam/phase2d_adam_*/
+
+# LaTeX build artifacts; keep sources
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+# Vendored infimnist local build products
+noisy_mnist/infimnist_py/build/
+noisy_mnist/infimnist_py/_infimnist.cpython-*.so
+noisy_mnist/infimnist_py/data
+noisy_mnist/infimnist_py/.git
