@@ -69,6 +69,8 @@ def plot_normalized_snr_panel(
 	xticks: list[int],
 	xlabel: str,
 	panel_label: str,
+	panel_label_x: float = -0.2,
+	panel_label_y: float = 1.02
 ) -> None:
 	"""Plot normalized SNR curves with a diagonal reference line."""
 	for pts in curves.values():
@@ -93,8 +95,8 @@ def plot_normalized_snr_panel(
 	ax.set_xlabel(xlabel)
 	ax.set_ylabel("Normalized SNR")
 	ax.text(
-		-0.18,
-		1.02,
+		panel_label_x,
+		panel_label_y,
 		panel_label,
 		transform=ax.transAxes,
 		ha="left",
@@ -113,7 +115,15 @@ def plot_snr_scaling_figure(
 	label_n: int = 6,
 ) -> None:
 	"""Plot collapsed normalized SNR vs d and N in a single figure."""
-	fig, axes = plt.subplots(1, 2, figsize=(6.75, 2.0), dpi=300, constrained_layout=True)
+	fig, axes = plt.subplots(1, 2, figsize=(6.75, 1.6), dpi=300, constrained_layout=False)
+
+	# Shared placement and styling for the overlay texts (easy to tweak)
+	text_x = 0.65
+	text_y = 0.18
+	text_bbox = dict(boxstyle="round,pad=0.3", facecolor="0.95", edgecolor="0.8", linewidth=0.6)
+	text_kwargs = dict(ha="center", va="bottom", fontsize=8, bbox=text_bbox)
+	# Add a bit more horizontal whitespace between the two panels
+	fig.subplots_adjust(wspace=0.35)
 
 	curves_d, xticks_d = load_normalized_snr_curves(
 		d_csv_path,
@@ -134,6 +144,15 @@ def plot_snr_scaling_figure(
 		xticks=xticks_n,
 		xlabel="Training set size $N$",
 		panel_label="(a)",
+		panel_label_x=-0.22,
+	)
+	# Overlay fixed parameter text for panel (a)
+	axes[0].text(
+		text_x,
+		text_y,
+		"Feature dimension\n$d=784$",
+		transform=axes[0].transAxes,
+		**text_kwargs,
 	)
 	plot_normalized_snr_panel(
 		axes[1],
@@ -141,6 +160,15 @@ def plot_snr_scaling_figure(
 		xticks=xticks_d,
 		xlabel="Feature dimension $d$",
 		panel_label="(b)",
+		panel_label_x=-0.25,
+	)
+	# Overlay fixed parameter text for panel (b)
+	axes[1].text(
+		text_x,
+		text_y,
+		"Dataset size\n$N=10{,}000$",
+		transform=axes[1].transAxes,
+		**text_kwargs,
 	)
 	output_path.parent.mkdir(parents=True, exist_ok=True)
 	fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
