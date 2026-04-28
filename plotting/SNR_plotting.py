@@ -142,8 +142,6 @@ def plot_snr_scaling_figure(
 		xlabel="Feature dimension $d$",
 		panel_label="(b)",
 	)
-
-	axes[1].set_ylabel("")
 	output_path.parent.mkdir(parents=True, exist_ok=True)
 	fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
 	plt.close(fig)
