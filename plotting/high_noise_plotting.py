@@ -101,12 +101,11 @@ def plot_actual_vs_predicted_scatter(
 	r2_fontsize: int = 8,
 	linewidth: float = 1,
 ) -> None:
-	"""Plot predicted vs actual scatter with diagonal and R^2 annotation."""
+	"""Plot predicted vs actual scatter with diagonal and Pearson r annotation."""
 	database = pd.read_json(json_path)
 	fit = database["summary"]["simple_delta_fit_raw"]
 	a = float(fit["a"])
 	b = float(fit["b"])
-	r2 = fit.get("r2")
 
 	data = pd.read_csv(csv_path)
 	required_cols = {"empirical_mean", "simple_delta_xstar_x_centered"}
@@ -134,11 +133,12 @@ def plot_actual_vs_predicted_scatter(
 	ax.xaxis.set_major_locator(ticker.MaxNLocator(4))
 	ax.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
-	if r2 is not None:
+	r_value = float(np.corrcoef(x, y)[0, 1])
+	if np.isfinite(r_value):
 		ax.text(
 			0.05,
 			0.92,
-			rf"$R^2 = {float(r2):.3f}$",
+			rf"$r = {r_value:.3f}$",
 			transform=ax.transAxes,
 			va="top",
 			fontsize=r2_fontsize,
@@ -215,7 +215,7 @@ def plot_high_noise_single_column(
 	ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
 	ax.legend(frameon=True, handlelength=1.6, loc="upper right", bbox_to_anchor=(1.0, 0.96))
 
-	inset_ax = ax.inset_axes([0.17, 0.2, 0.4, 0.4])
+	inset_ax = ax.inset_axes([0.17, 0.2, 0.4, 0.45])
 	plot_actual_vs_predicted_scatter(
 		inset_ax,
 		csv_path=comparison_csv,
