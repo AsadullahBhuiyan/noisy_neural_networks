@@ -124,7 +124,7 @@ def plot_actual_vs_predicted_scatter(
 	lo -= pad
 	hi += pad
 
-	ax.scatter(x, y, s=scatter_size, alpha=0.05, edgecolors="none", color="#E0A01E")
+	ax.scatter(x, y, s=scatter_size, alpha=0.05, edgecolors="none", color="#E0A01E", rasterized=True)
 	ax.plot([lo, hi], [lo, hi], color="k", linestyle="--", linewidth=linewidth)
 	ax.set_xlim(lo, hi)
 	ax.set_ylim(lo, hi)
