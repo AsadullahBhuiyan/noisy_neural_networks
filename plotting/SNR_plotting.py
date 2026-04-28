@@ -118,7 +118,7 @@ def plot_snr_scaling_figure(
 	fig, axes = plt.subplots(1, 2, figsize=(6.75, 1.6), dpi=300, constrained_layout=False)
 
 	# Shared placement and styling for the overlay texts (easy to tweak)
-	text_x = 0.65
+	text_x = 0.75
 	text_y = 0.18
 	text_bbox = dict(boxstyle="round,pad=0.3", facecolor="0.95", edgecolor="0.8", linewidth=0.6)
 	text_kwargs = dict(ha="center", va="bottom", fontsize=8, bbox=text_bbox)
