@@ -60,7 +60,7 @@ def plot_accuracy_vs_p(
 		markersize=3.5,
 		linewidth=1.2,
 		capsize=2.5,
-		color="tab:blue",
+		color="#b31b1b",
 		label="Neural network",
 	)
 
@@ -68,7 +68,7 @@ def plot_accuracy_vs_p(
 		baseline,
 		linewidth=1.2,
 		linestyle="--",
-		color="tab:red",
+		color="tab:gray",
 		label="Nearest-class\r\nmean classifier",
 	)
 	ax.set_xlabel(r"Corruption probability $p$")
@@ -124,7 +124,7 @@ def plot_actual_vs_predicted_scatter(
 	lo -= pad
 	hi += pad
 
-	ax.scatter(x, y, s=scatter_size, alpha=0.05, edgecolors="none", color="tab:gray")
+	ax.scatter(x, y, s=scatter_size, alpha=0.05, edgecolors="none", color="#E0A01E")
 	ax.plot([lo, hi], [lo, hi], color="k", linestyle="--", linewidth=linewidth)
 	ax.set_xlim(lo, hi)
 	ax.set_ylim(lo, hi)
@@ -215,7 +215,7 @@ def plot_high_noise_single_column(
 	ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
 	ax.legend(frameon=True, handlelength=1.6, loc="upper right", bbox_to_anchor=(1.0, 0.96))
 
-	inset_ax = ax.inset_axes([0.17, 0.2, 0.4, 0.45])
+	inset_ax = ax.inset_axes([0.19, 0.2, 0.3, 0.455])
 	plot_actual_vs_predicted_scatter(
 		inset_ax,
 		csv_path=comparison_csv,

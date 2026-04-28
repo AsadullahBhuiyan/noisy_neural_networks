@@ -62,7 +62,7 @@ def plot_accuracy_vs_corruption(csv_path: Path, output_path: Path) -> None:
 	ax.set_ylabel("Accuracy (%)")
 	ax.set_xlim(left=0.0)
 	ax.set_ylim(bottom=0.0)
-	ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
+	# ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
 	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
 
 	fig.tight_layout()
@@ -115,17 +115,17 @@ def plot_accuracy_with_digit_strip_panel(
 	)
 
 	ax = fig.add_subplot(inner[0, :])
-	ax.plot(df["p"], 100.0 * df["mean_train_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="tab:blue")
-	ax.plot(df["p"], 100.0 * df["mean_test_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="tab:red")
+	ax.plot(df["p"], 100.0 * df["mean_train_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
+	ax.plot(df["p"], 100.0 * df["mean_test_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
 	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
-	ax.text(0.48, 10.8, "Random guess", ha="left", va="bottom", fontsize=8)
+	ax.text(0.48, 13, "Random guess", ha="left", va="bottom", fontsize=8)
 	ax.set_xlabel(r"Corruption probability $p$")#, labelpad=0.2)
 	ax.set_ylabel("Accuracy (%)")
 	# ax.set_xlim(left=0.0)
 	ax.set_ylim(bottom=0.0)
 	ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}"))
-	ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
+	# ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
 	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
 	ax.text(
 		0.05,
@@ -217,7 +217,7 @@ def main() -> None:
 	mnist_csv_path = repo_root / "mock_data" / "mock_accuracy_vs_corruption_mnist.csv"
 	kmnist_csv_path = repo_root / "mock_data" / "mock_accuracy_vs_corruption_kmnist.csv"
 	output_path = repo_root / "figures" / "accuracy_vs_corruption_mnist_kmnist.pdf"
-	mnist_data_root = repo_root / "data"
+	mnist_data_root = repo_root / "noisy_mnist_asad" / "data"
 
 	plot_intro_figure(
 		mnist_csv_path=mnist_csv_path,

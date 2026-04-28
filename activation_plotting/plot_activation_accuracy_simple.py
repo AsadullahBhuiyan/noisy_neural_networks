@@ -15,7 +15,7 @@ def configure_plot_style() -> None:
         {
             "figure.dpi": 300,
             "savefig.dpi": 300,
-            "figure.figsize": (3.375, 2.4),
+            "figure.figsize": (3.375, 2.2),
             "font.family": "CMU Sans Serif",
             "font.size": 8,
             "axes.labelsize": 8,
@@ -41,10 +41,10 @@ out_path = here / "simple_activation_accuracy_vs_p.png"
 out_pdf_path = here / "simple_activation_accuracy_vs_p.pdf"
 
 colors = {
-    "erf": "tab:blue",
-    "gelu": "tab:orange",
-    "swish": "tab:green",
-    "tanh": "tab:red",
+    "erf": "#1F4E79",
+    "gelu": "#2A7F56",
+    "swish": "#C76E2B",
+    "tanh": "#8C3B5D",
 }
 markers = {
     "erf": "o",
@@ -99,8 +99,8 @@ for activation, values in sorted(data.items()):
 plt.xlabel(r"Corruption probability $p$")
 plt.ylabel("Test accuracy (%)")
 plt.gca().xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-plt.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
+# plt.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
 plt.legend(frameon=True, handlelength=1.8, loc="lower left")
 plt.tight_layout()
-plt.savefig(out_path, dpi=300)
-plt.savefig(out_pdf_path)
+# plt.savefig(out_path, dpi=300)
+plt.savefig(out_pdf_path, bbox_inches="tight", pad_inches=0.04)
