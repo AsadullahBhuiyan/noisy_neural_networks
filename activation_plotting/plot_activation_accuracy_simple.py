@@ -6,11 +6,39 @@ from pathlib import Path
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib-jt577")
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
+
+
+def configure_plot_style() -> None:
+    """Apply project-default figure styling."""
+    plt.rcParams.update(
+        {
+            "figure.dpi": 300,
+            "savefig.dpi": 300,
+            "figure.figsize": (3.375, 2.4),
+            "font.family": "CMU Sans Serif",
+            "font.size": 8,
+            "axes.labelsize": 8,
+            "axes.titlesize": 8,
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+            "legend.fontsize": 8,
+            "text.usetex": False,
+            "mathtext.fontset": "custom",
+            "mathtext.rm": "CMU Sans Serif",
+            "mathtext.it": "CMU Sans Serif:italic",
+            "mathtext.bf": "CMU Sans Serif:bold",
+        }
+    )
+
+
+configure_plot_style()
 
 
 here = Path(__file__).resolve().parent
 csv_path = here / "summary_test_accuracy_by_p_activation.csv"
 out_path = here / "simple_activation_accuracy_vs_p.png"
+out_pdf_path = here / "simple_activation_accuracy_vs_p.pdf"
 
 colors = {
     "erf": "tab:blue",
@@ -30,6 +58,12 @@ offsets = {
     "swish": 0.0005,
     "tanh": 0.0015,
 }
+legend_labels = {
+    "erf": "erf",
+    "gelu": "GELU",
+    "swish": "Swish",
+    "tanh": "Tanh",
+}
 
 data = defaultdict(list)
 with open(csv_path, newline="") as f:
@@ -40,7 +74,7 @@ with open(csv_path, newline="") as f:
         std = float(row["std_accuracy_percent"])
         data[row["activation"]].append((p, mean, std))
 
-plt.figure(figsize=(8, 6))
+plt.figure()
 for activation, values in sorted(data.items()):
     values = sorted(values)
     p = [v[0] for v in values]
@@ -55,17 +89,18 @@ for activation, values in sorted(data.items()):
         yerr=std,
         marker=marker,
         color=color,
-        label=activation,
-        linewidth=4,
-        markersize=10,
-        capsize=4,
-        alpha=0.75,
+        label=legend_labels.get(activation, activation),
+        linewidth=1.2,
+        markersize=3.2,
+        capsize=2,
+        alpha=0.9,
     )
 
-plt.xlabel("p", fontsize=24)
-plt.ylabel("Test accuracy (%)", fontsize=24)
-plt.xticks(fontsize=22)
-plt.yticks(fontsize=22)
-plt.legend(fontsize=18)
+plt.xlabel(r"Corruption probability $p$")
+plt.ylabel("Test accuracy (%)")
+plt.gca().xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+plt.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
+plt.legend(frameon=True, handlelength=1.8, loc="lower left")
 plt.tight_layout()
 plt.savefig(out_path, dpi=300)
+plt.savefig(out_pdf_path)

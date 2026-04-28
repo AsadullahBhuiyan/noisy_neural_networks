@@ -41,7 +41,7 @@ def plot_accuracy_vs_corruption(csv_path: Path, output_path: Path) -> None:
 	fig, ax = plt.subplots()
 	ax.plot(
 		df["p"],
-		df["mean_train_acc"],
+		100.0 * df["mean_train_acc"],
 		marker="o",
 		markersize=3.5,
 		linewidth=1.2,
@@ -49,19 +49,21 @@ def plot_accuracy_vs_corruption(csv_path: Path, output_path: Path) -> None:
 	)
 	ax.plot(
 		df["p"],
-		df["mean_test_acc"],
+		100.0 * df["mean_test_acc"],
 		marker="o",
 		markersize=3.5,
 		linewidth=1.2,
 		label="Test",
 	)
+	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
+	ax.text(0.48, 10.8, "Random guess", ha="left", va="bottom", fontsize=8)
 
 	ax.set_xlabel(r"Corruption probability $p$")
-	ax.set_ylabel("Accuracy")
-	# ax.set_xlim(0.0, 1.0)
-	# ax.set_ylim(0.05, 1.03)
+	ax.set_ylabel("Accuracy (%)")
+	ax.set_xlim(left=0.0)
+	ax.set_ylim(bottom=0.0)
 	ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
-	ax.legend(frameon=True, handlelength=1.8)
+	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
 
 	fig.tight_layout()
 	output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,14 +115,18 @@ def plot_accuracy_with_digit_strip_panel(
 	)
 
 	ax = fig.add_subplot(inner[0, :])
-	ax.plot(df["p"], df["mean_train_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="tab:blue")
-	ax.plot(df["p"], df["mean_test_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="tab:red")
+	ax.plot(df["p"], 100.0 * df["mean_train_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="tab:blue")
+	ax.plot(df["p"], 100.0 * df["mean_test_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="tab:red")
+	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
+	ax.text(0.48, 10.8, "Random guess", ha="left", va="bottom", fontsize=8)
 	ax.set_xlabel(r"Corruption probability $p$")#, labelpad=0.2)
-	ax.set_ylabel("Accuracy")
+	ax.set_ylabel("Accuracy (%)")
+	# ax.set_xlim(left=0.0)
+	ax.set_ylim(bottom=0.0)
 	ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}"))
 	ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
-	ax.legend(frameon=True, handlelength=1.8, loc="lower left")
+	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
 	ax.text(
 		0.05,
 		0.65,
@@ -133,11 +139,11 @@ def plot_accuracy_with_digit_strip_panel(
 		bbox=dict(facecolor="white", edgecolor="none", alpha=0.75, pad=0.15),
 	)
 
-	y_mark = np.interp(np.asarray(p_examples), df["p"], df["mean_test_acc"])
+	y_mark = 100.0 * np.interp(np.asarray(p_examples), df["p"], df["mean_test_acc"])
 	ax.scatter(p_examples, y_mark, s=18, marker="v", color="black", zorder=4)
 
 	ax.text(
-		-0.14,
+		-0.17,
 		1.02,
 		panel_label,
 		transform=ax.transAxes,
