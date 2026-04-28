@@ -1,0 +1,26 @@
+{
+  "input_csv": "/data2/jt577/2026/04.2026/NN_noise/outputs/ensemble_test_featureDim_sweep/nested_means_stdvs.csv",
+  "output_csv": "/data2/jt577/2026/04.2026/NN_noise/outputs/ensemble_test_featureDim_sweep/nested_by_d_testpoint_means.csv",
+  "summary_csv": "/data2/jt577/2026/04.2026/NN_noise/outputs/ensemble_test_featureDim_sweep/nested_by_d_summary.csv",
+  "mean_column": "nested_mean",
+  "std_column": "nested_std",
+  "class_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "feature_dims": [
+    784,
+    1849,
+    3025,
+    4096
+  ],
+  "description": "The main CSV has one row per feature_dim and test_index. avg_std_all_testpoints_labels_for_d is the average of STD_COLUMN over all rows with that feature_dim, i.e. all selected test points and labels. mean_label_k stores the nested ensemble mean for class k at that test point."
+}

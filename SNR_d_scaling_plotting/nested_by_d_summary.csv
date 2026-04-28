@@ -1,0 +1,5 @@
+feature_dim,avg_std_all_testpoints_labels,median_std_all_testpoints_labels,min_std_all_testpoints_labels,max_std_all_testpoints_labels,num_std_values,num_testpoints,num_labels,noise_type,noise_probability,train_size,img_h,img_w,loss_name,activation,depth,width,used_num_noise_datasets,used_init_count_min,used_init_count_max
+784,0.09545259482689572,0.09543334047481397,0.07317823222171836,0.12325902147236156,1000,100,10,additive_gaussian,0.98,10000,28,28,mse,erf,3,2048,100,10,10
+1849,0.1154203917926213,0.11519752989871282,0.08398799480560537,0.14358776094379697,1000,100,10,additive_gaussian,0.98,10000,43,43,mse,erf,3,2048,100,10,10
+3025,0.11023229782423405,0.10967660052377454,0.08691606487158529,0.1378326193870911,1000,100,10,additive_gaussian,0.98,10000,55,55,mse,erf,3,2048,100,10,10
+4096,0.09644165102778185,0.09633777415960369,0.0746623767974949,0.11684141261833583,1000,100,10,additive_gaussian,0.98,10000,64,64,mse,erf,3,2048,100,10,10
