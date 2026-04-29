@@ -93,6 +93,7 @@ def plot_accuracy_with_digit_strip_panel(
 	seed: int,
 	data_index: int = 41,
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
+	show_digit_markers: bool = False,
 ) -> None:
 	"""Plot one accuracy-vs-p panel with noisy digits below the x-axis."""
 	df = pd.read_csv(csv_path)
@@ -121,7 +122,8 @@ def plot_accuracy_with_digit_strip_panel(
 	ax.text(0.48, 13, "Random guess", ha="left", va="bottom", fontsize=8)
 	ax.set_xlabel(r"Corruption probability $p$")#, labelpad=0.2)
 	ax.set_ylabel("Accuracy (%)")
-	# ax.set_xlim(left=0.0)
+	# ax.set_xlim(float(min(p_examples)), float(max(p_examples)))
+	ax.set_xticks(np.asarray(p_examples, dtype=float))
 	ax.set_ylim(bottom=0.0)
 	ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}"))
@@ -139,8 +141,9 @@ def plot_accuracy_with_digit_strip_panel(
 		bbox=dict(facecolor="white", edgecolor="none", alpha=0.75, pad=0.15),
 	)
 
-	y_mark = 100.0 * np.interp(np.asarray(p_examples), df["p"], df["mean_test_acc"])
-	ax.scatter(p_examples, y_mark, s=18, marker="v", color="black", zorder=4)
+	if show_digit_markers:
+		y_mark = 100.0 * np.interp(np.asarray(p_examples), df["p"], df["mean_test_acc"])
+		ax.scatter(p_examples, y_mark, s=18, marker="v", color="black", zorder=4)
 
 	ax.text(
 		-0.17,
@@ -174,6 +177,7 @@ def plot_intro_figure(
 	output_path: Path,
 	seed: int = 8,
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
+	show_digit_markers: bool = False,
 ) -> None:
 	"""Plot MNIST and KMNIST corruption figures side by side."""
 	fig = plt.figure(figsize=(6.75, 2.5), dpi=300, constrained_layout=True)
@@ -191,6 +195,7 @@ def plot_intro_figure(
 		show_noise_label=True,
 		seed=seed,
 		p_examples=p_examples,
+		show_digit_markers=show_digit_markers,
 	)
 	plot_accuracy_with_digit_strip_panel(
 		fig=fig,
@@ -203,10 +208,11 @@ def plot_intro_figure(
 		show_noise_label=False,
 		seed=seed + 1,
 		p_examples=p_examples,
+		show_digit_markers=show_digit_markers,
 	)
 
 	output_path.parent.mkdir(parents=True, exist_ok=True)
-	fig.savefig(output_path, bbox_inches="tight", pad_inches=0.03)
+	fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
 	plt.close(fig)
 
 
