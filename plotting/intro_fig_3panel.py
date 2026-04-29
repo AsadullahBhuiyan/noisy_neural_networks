@@ -13,7 +13,6 @@ def configure_plot_style() -> None:
 		{
 			"figure.dpi": 300,
 			"savefig.dpi": 300,
-			"figure.figsize": (3.375, 2.4),
 			"font.family": "CMU Sans Serif",
 			"font.size": 8,
 			"axes.labelsize": 8,
@@ -29,47 +28,6 @@ def configure_plot_style() -> None:
 		}
 	)
 
-def plot_accuracy_vs_corruption(csv_path: Path, output_path: Path) -> None:
-	"""Plot mean train/test accuracy against corruption probability."""
-	df = pd.read_csv(csv_path)
-
-	required_cols = {"p", "mean_train_acc", "mean_test_acc"}
-	missing_cols = required_cols - set(df.columns)
-	if missing_cols:
-		raise ValueError(f"Missing required columns in {csv_path}: {sorted(missing_cols)}")
-
-	fig, ax = plt.subplots()
-	ax.plot(
-		df["p"],
-		100.0 * df["mean_train_acc"],
-		marker="o",
-		markersize=3.5,
-		linewidth=1.2,
-		label="Train",
-	)
-	ax.plot(
-		df["p"],
-		100.0 * df["mean_test_acc"],
-		marker="o",
-		markersize=3.5,
-		linewidth=1.2,
-		label="Test",
-	)
-	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
-	ax.text(0.48, 10.8, "Random guess", ha="left", va="bottom", fontsize=8)
-
-	ax.set_xlabel(r"Corruption probability $p$")
-	ax.set_ylabel("Accuracy (%)")
-	ax.set_xlim(left=0.0)
-	ax.set_ylim(bottom=0.0)
-	# ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
-	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
-
-	fig.tight_layout()
-	output_path.parent.mkdir(parents=True, exist_ok=True)
-	fig.savefig(output_path)
-	plt.close(fig)
-
 
 def apply_replacement_noise(image: np.ndarray, p: float, rng: np.random.Generator) -> np.ndarray:
 	"""Replace each pixel with Uniform(0,1) noise with probability p."""
@@ -84,51 +42,66 @@ def apply_replacement_noise(image: np.ndarray, p: float, rng: np.random.Generato
 def plot_accuracy_with_digit_strip_panel(
 	fig: plt.Figure,
 	panel_spec,
-	csv_path: Path,
+	df: pd.DataFrame,
 	data_root: Path,
 	dataset_cls,
 	panel_label: str,
 	panel_name: str,
 	show_noise_label: bool,
+	show_y_label: bool,
 	seed: int,
 	data_index: int = 41,
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
 	show_digit_markers: bool = False,
+	label_x: float = -0.25,
 ) -> None:
 	"""Plot one accuracy-vs-p panel with noisy digits below the x-axis."""
-	df = pd.read_csv(csv_path)
-	required_cols = {"p", "mean_train_acc", "mean_test_acc"}
+	required_cols = {"p", "mean_train_accuracy", "mean_test_accuracy"}
 	missing_cols = required_cols - set(df.columns)
 	if missing_cols:
-		raise ValueError(f"Missing required columns in {csv_path}: {sorted(missing_cols)}")
+		raise ValueError(f"Missing required columns: {sorted(missing_cols)}")
 
-	dataset = dataset_cls(root=data_root, train=True, download=True)
+	try:
+		dataset = dataset_cls(root=data_root, train=True, download=(dataset_cls != datasets.KMNIST))
+		original_pil, _ = dataset[data_index]
+		original = np.asarray(original_pil, dtype=np.float32) / 255.0
+	except Exception:
+		if dataset_cls == datasets.KMNIST:
+			npz_path = Path(data_root) / "KMNIST" / "kmnist-train-imgs.npz"
+			imgs = np.load(npz_path)["arr_0"]
+			original = imgs[data_index].astype(np.float32) / 255.0
+		else:
+			raise
+
 	rng = np.random.default_rng(seed)
-	original_pil, _ = dataset[data_index]
-	original = np.asarray(original_pil, dtype=np.float32) / 255.0
 
 	inner = panel_spec.subgridspec(
 		2,
 		len(p_examples),
 		height_ratios=(3.0, 0.9),
-		hspace=0.05,
+		hspace=0.45,
 		wspace=0.05,
 	)
 
 	ax = fig.add_subplot(inner[0, :])
-	ax.plot(df["p"], 100.0 * df["mean_train_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
-	ax.plot(df["p"], 100.0 * df["mean_test_acc"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
+	ax.plot(df["p"], 100.0 * df["mean_train_accuracy"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
+	ax.plot(df["p"], 100.0 * df["mean_test_accuracy"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
 	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
 	ax.text(0.48, 13, "Random guess", ha="left", va="bottom", fontsize=8)
-	ax.set_xlabel(r"Corruption probability $p$")#, labelpad=0.2)
-	ax.set_ylabel("Accuracy (%)")
-	# ax.set_xlim(float(min(p_examples)), float(max(p_examples)))
+	ax.set_xlabel(r"Corruption probability $p$")
+	
+	if show_y_label:
+		ax.set_ylabel("Accuracy (%)")
+		
 	ax.set_xticks(np.asarray(p_examples, dtype=float))
-	ax.set_ylim(bottom=0.0)
+	ax.set_ylim(0.0, 105.0)
 	ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}"))
-	# ax.grid(True, linestyle="--", linewidth=0.4, alpha=0.5)
+	
+
+
 	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
+
 	ax.text(
 		0.05,
 		0.65,
@@ -142,12 +115,12 @@ def plot_accuracy_with_digit_strip_panel(
 	)
 
 	if show_digit_markers:
-		y_mark = 100.0 * np.interp(np.asarray(p_examples), df["p"], df["mean_test_acc"])
+		y_mark = 100.0 * np.interp(np.asarray(p_examples), df["p"], df["mean_test_accuracy"])
 		ax.scatter(p_examples, y_mark, s=18, marker="v", color="black", zorder=4)
 
 	ax.text(
-		-0.17,
-		1.02,
+		label_x,
+		1.05,
 		panel_label,
 		transform=ax.transAxes,
 		ha="left",
@@ -156,61 +129,85 @@ def plot_accuracy_with_digit_strip_panel(
 		clip_on=False,
 	)
 
-	panel_bbox = panel_spec.get_position(fig)
-
-	if show_noise_label:
-		fig.text(panel_bbox.x0 - 0.115, panel_bbox.y0 + 0.05, "Noise\nmodel:", ha="left", va="center")
-
 	for i, p in enumerate(p_examples):
 		img_ax = fig.add_subplot(inner[1, i])
 		noise_rng = np.random.default_rng(seed + i)
 		noisy = apply_replacement_noise(original, p=p, rng=noise_rng)
 		img_ax.imshow(noisy, cmap="gray", vmin=0.0, vmax=1.0)
-		img_ax.text(0.5, -0.09, rf"$p={p:g}$", transform=img_ax.transAxes, ha="center", va="top")
+		img_ax.text(0.5, -0.12, rf"$p={p:g}$", transform=img_ax.transAxes, ha="center", va="top", fontsize=6.5)
 		img_ax.axis("off")
+		
+		if show_noise_label and i == 0:
+			img_ax.text(-1.1, 0.5, "Noise\nmodel:", transform=img_ax.transAxes, ha="left", va="center")
 
 
 def plot_intro_figure(
-	mnist_csv_path: Path,
-	kmnist_csv_path: Path,
+	csv_path: Path,
 	data_root: Path,
 	output_path: Path,
 	seed: int = 8,
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
 	show_digit_markers: bool = False,
 ) -> None:
-	"""Plot MNIST and KMNIST corruption figures side by side."""
-	fig = plt.figure(figsize=(6.75, 2.5), dpi=300, constrained_layout=True)
-	fig.set_constrained_layout_pads(hspace=0.01, h_pad=0.01, w_pad=0.01)
-	outer = fig.add_gridspec(1, 3, width_ratios=(1.0, 0.05, 1.0), wspace=0.0)
+	"""Plot MNIST, FMNIST, and KMNIST corruption figures side by side."""
+	df_all = pd.read_csv(csv_path)
 
+	fig = plt.figure(figsize=(6.75, 2.8), dpi=300)
+	
+	outer = fig.add_gridspec(1, 3, wspace=0.25)
+
+	# MNIST
 	plot_accuracy_with_digit_strip_panel(
 		fig=fig,
 		panel_spec=outer[0],
-		csv_path=mnist_csv_path,
+		df=df_all[df_all["dataset_name"] == "mnist"],
 		data_root=data_root,
 		dataset_cls=datasets.MNIST,
 		panel_label="(a)",
 		panel_name="MNIST",
 		show_noise_label=True,
+		show_y_label=True,
 		seed=seed,
 		p_examples=p_examples,
 		show_digit_markers=show_digit_markers,
+		label_x=-0.26,
 	)
+	
+	# FMNIST
 	plot_accuracy_with_digit_strip_panel(
 		fig=fig,
-		panel_spec=outer[2],
-		csv_path=kmnist_csv_path,
+		panel_spec=outer[1],
+		df=df_all[df_all["dataset_name"] == "fmnist"],
 		data_root=data_root,
-		dataset_cls=datasets.KMNIST,
+		dataset_cls=datasets.FashionMNIST,
 		panel_label="(b)",
-		panel_name="KMNIST",
+		panel_name="Fashion-MNIST",
 		show_noise_label=False,
+		show_y_label=False,
 		seed=seed + 1,
 		p_examples=p_examples,
 		show_digit_markers=show_digit_markers,
+		label_x=-0.24,
 	)
 
+	# KMNIST
+	plot_accuracy_with_digit_strip_panel(
+		fig=fig,
+		panel_spec=outer[2],
+		df=df_all[df_all["dataset_name"] == "kmnist"],
+		data_root=data_root,
+		dataset_cls=datasets.KMNIST,
+		panel_label="(c)",
+		panel_name="KMNIST",
+		show_noise_label=False,
+		show_y_label=False,
+		seed=seed + 2,
+		p_examples=p_examples,
+		show_digit_markers=show_digit_markers,
+		label_x=-0.24,
+	)
+
+	fig.subplots_adjust(left=0.08, right=0.98, bottom=0.15, top=0.9)
 	output_path.parent.mkdir(parents=True, exist_ok=True)
 	fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
 	plt.close(fig)
@@ -220,15 +217,13 @@ def main() -> None:
 	configure_plot_style()
 
 	repo_root = Path(__file__).resolve().parent.parent
-	mnist_csv_path = repo_root / "mmnist_data" / "mock_accuracy_vs_corruption_mnist.csv"
-	kmnist_csv_path = repo_root / "mnist_data" / "mock_accuracy_vs_corruption_kmnist.csv"
-	output_path = repo_root / "figures" / "accuracy_vs_corruption_mnist_kmnist.pdf"
-	mnist_data_root = repo_root / "noisy_mnist_asad" / "data"
+	csv_path = repo_root / "mnist_data" / "results_summary_mnist-kmnist-fmnist_balanced_noise_curve_r100_e20_p0.00-1.00_w128_d3.csv"
+	output_path = repo_root / "figures" / "intro_fig_3panel.pdf"
+	data_root = Path("/Users/omrile/Desktop/ML-Datasets")
 
 	plot_intro_figure(
-		mnist_csv_path=mnist_csv_path,
-		kmnist_csv_path=kmnist_csv_path,
-		data_root=mnist_data_root,
+		csv_path=csv_path,
+		data_root=data_root,
 		output_path=output_path,
 		seed=8,
 	)
