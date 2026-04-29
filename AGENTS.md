@@ -1,0 +1,3 @@
+- Do not install any python packages and do not create any virtual environments. I have all the required packages for this project installed and I want to run it on my base conda environment.
+- Ignore the "legacy" folder.
+- Unless otherwise specified, figures width should be 3.375, dpi=300, font should be "CMU Sans Serif", mathematical expressions should be typeset in latex using $$, tight layout, legible font size (preferably 8pt or larger.)
