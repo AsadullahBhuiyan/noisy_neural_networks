@@ -56,7 +56,7 @@ def plot_accuracy_with_digit_strip_panel(
 	label_x: float = -0.25,
 ) -> None:
 	"""Plot one accuracy-vs-p panel with noisy digits below the x-axis."""
-	required_cols = {"p", "mean_train_accuracy", "mean_test_accuracy"}
+	required_cols = {"p", "mean_train_accuracy", "mean_test_accuracy", "std_train_accuracy", "std_test_accuracy"}
 	missing_cols = required_cols - set(df.columns)
 	if missing_cols:
 		raise ValueError(f"Missing required columns: {sorted(missing_cols)}")
@@ -84,8 +84,17 @@ def plot_accuracy_with_digit_strip_panel(
 	)
 
 	ax = fig.add_subplot(inner[0, :])
-	ax.plot(df["p"], 100.0 * df["mean_train_accuracy"], marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
-	ax.plot(df["p"], 100.0 * df["mean_test_accuracy"], marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
+	
+	train_mean = 100.0 * df["mean_train_accuracy"]
+	train_std = 100.0 * df["std_train_accuracy"]
+	ax.plot(df["p"], train_mean, marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
+	ax.fill_between(df["p"], train_mean - train_std, train_mean + train_std, color="#1402a0", alpha=0.2, linewidth=0)
+	
+	test_mean = 100.0 * df["mean_test_accuracy"]
+	test_std = 100.0 * df["std_test_accuracy"]
+	ax.plot(df["p"], test_mean, marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
+	ax.fill_between(df["p"], test_mean - test_std, test_mean + test_std, color="#b31b1b", alpha=0.2, linewidth=0)
+
 	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
 	ax.text(0.48, 13, "Random guess", ha="left", va="bottom", fontsize=8)
 	ax.set_xlabel(r"Corruption probability $p$")
