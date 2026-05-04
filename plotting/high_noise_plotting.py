@@ -39,6 +39,7 @@ def plot_accuracy_vs_p(
     activation: str,
     baseline: float,
     panel_label: str | None,
+    analytical_csv: Path | None = None,
 ) -> None:
     """Plot test accuracy vs p for a single activation."""
     df = pd.read_csv(csv_path)
@@ -52,7 +53,7 @@ def plot_accuracy_vs_p(
         raise ValueError(f"No rows for activation '{activation}' in {csv_path}.")
     act_df = act_df.sort_values("p")
 
-    line = ax.errorbar(
+    ax.errorbar(
         act_df["p"],
         act_df["mean_accuracy_percent"],
         yerr=act_df["std_accuracy_percent"],
@@ -62,14 +63,25 @@ def plot_accuracy_vs_p(
         capsize=2.5,
         color="#b31b1b",
         label="Neural network",
+        zorder=2,
     )
+
+    if analytical_csv is not None:
+        an_df = pd.read_csv(analytical_csv).sort_values("p")
+        ax.plot(
+            an_df["p"],
+            an_df["mean_accuracy_percent"],
+            linewidth=1.2,
+            color="#404040",
+            label="Analytical model",
+            zorder=3,
+        )
 
     ax.axhline(
         baseline,
         linewidth=1.2,
         linestyle="--",
         color="tab:gray",
-        label="Nearest-class\r\n-mean classifier",
     )
     ax.set_xlabel(r"Corruption probability $p$")
     ax.set_ylabel("Test accuracy (%)")
@@ -175,6 +187,7 @@ def plot_high_noise_figure(
     output_path: Path,
     activation: str = "erf",
     baseline: float = 76.42,
+    analytical_csv: Path | None = None,
 ) -> None:
     """Create the combined high-noise figure with two panels."""
     fig, axes = plt.subplots(1, 2, figsize=(6.75, 2.4), dpi=300, constrained_layout=True)
@@ -185,6 +198,7 @@ def plot_high_noise_figure(
         activation=activation,
         baseline=baseline,
         panel_label="(a)",
+        analytical_csv=analytical_csv,
     )
     plot_actual_vs_predicted_scatter(
         axes[1],
@@ -206,6 +220,7 @@ def plot_high_noise_single_column(
     output_path: Path,
     activation: str = "erf",
     baseline: float = 76.42,
+    analytical_csv: Path | None = None,
 ) -> None:
     """Create a single-column figure with an inset scatter panel."""
     fig, ax = plt.subplots(figsize=(3.375, 2.4), dpi=300, constrained_layout=True)
@@ -216,6 +231,7 @@ def plot_high_noise_single_column(
         activation=activation,
         baseline=baseline,
         panel_label=None,
+        analytical_csv=analytical_csv,
     )
     line = ax.lines[0] if ax.lines else None
     if line is not None:
@@ -225,7 +241,7 @@ def plot_high_noise_single_column(
     ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
     ax.legend(frameon=True, handlelength=1.6, loc="upper right", bbox_to_anchor=(1.0, 0.96))
 
-    inset_ax = ax.inset_axes([0.25, 0.18, 0.3, 0.455])
+    inset_ax = ax.inset_axes([0.2, 0.18, 0.3, 0.455])
     plot_actual_vs_predicted_scatter(
         inset_ax,
         csv_path=comparison_csv,
@@ -248,6 +264,7 @@ def main() -> None:
 
     repo_root = Path(__file__).resolve().parent.parent
     accuracy_csv = repo_root / "actual_ vs_predicted_vs_p" / "summary_test_accuracy_by_p_activation.csv"
+    analytical_csv = repo_root / "actual_ vs_predicted_vs_p" / "analytical_abc_accuracy_summary_fit_c.csv"
     comparison_base = repo_root / "actual_vs_predicted_scatter" / "subset__test=1000"
     comparison_csv = comparison_base / "per_test_class_comparison.csv"
     comparison_json = comparison_base / "comparison_database.json"
@@ -258,6 +275,7 @@ def main() -> None:
         comparison_csv=comparison_csv,
         comparison_json=comparison_json,
         output_path=output_path,
+        analytical_csv=analytical_csv,
     )
     print(f"Saved figure to: {output_path}")
 
