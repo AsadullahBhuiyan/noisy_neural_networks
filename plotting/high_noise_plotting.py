@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+import csv
+import gzip
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -9,7 +12,6 @@ import pandas as pd
 
 
 def configure_plot_style() -> None:
-    """Apply project-default figure styling."""
     plt.rcParams.update(
         {
             "figure.dpi": 300,
@@ -36,27 +38,24 @@ def plot_accuracy_vs_p(
     ax: plt.Axes,
     *,
     csv_path: Path,
-    activation: str,
-    baseline: float,
+    noise_type: str,
     panel_label: str | None,
-    analytical_csv: Path | None = None,
 ) -> None:
-    """Plot test accuracy vs p for a single activation."""
+    """Plot test accuracy vs p for a single noise type."""
     df = pd.read_csv(csv_path)
-    required_cols = {"p", "activation", "mean_accuracy_percent", "std_accuracy_percent"}
-    missing_cols = required_cols - set(df.columns)
-    if missing_cols:
-        raise ValueError(f"Missing columns in {csv_path}: {sorted(missing_cols)}")
+    subset = df[df["noise_type"] == noise_type].sort_values("noise_probability")
+    if subset.empty:
+        raise ValueError(f"No rows for noise_type '{noise_type}' in {csv_path}.")
 
-    act_df = df[df["activation"] == activation].copy()
-    if act_df.empty:
-        raise ValueError(f"No rows for activation '{activation}' in {csv_path}.")
-    act_df = act_df.sort_values("p")
+    p = subset["noise_probability"]
+    nn_mean = subset["empirical_mean_test_accuracy"] * 100
+    nn_std = subset["empirical_std_test_accuracy"] * 100
+    an_mean = subset["mean_test_accuracy"] * 100
 
     ax.errorbar(
-        act_df["p"],
-        act_df["mean_accuracy_percent"],
-        yerr=act_df["std_accuracy_percent"],
+        p,
+        nn_mean,
+        yerr=nn_std,
         marker="o",
         markersize=3.5,
         linewidth=1.2,
@@ -65,42 +64,35 @@ def plot_accuracy_vs_p(
         label="Neural network",
         zorder=2,
     )
-
-    if analytical_csv is not None:
-        an_df = pd.read_csv(analytical_csv).sort_values("p")
-        ax.plot(
-            an_df["p"],
-            an_df["mean_accuracy_percent"],
-            linewidth=1.2,
-            color="#404040",
-            label="Analytical model",
-            zorder=3,
-        )
-
-    ax.axhline(
-        baseline,
+    ax.plot(
+        p,
+        an_mean,
         linewidth=1.2,
         linestyle="--",
-        color="tab:gray",
+        color="#404040",
+        label="Analytical model",
+        zorder=3,
     )
-    ax.set_xlabel(r"Corruption probability $p$")
+    xlabel = r"Corruption probability $p$" if noise_type == "replacement" else r"Corruption strength $p$"
+    ax.set_xlabel(xlabel)
     ax.set_ylabel("Test accuracy (%)")
     ax.set_ylim(0, 100)
-    ax.set_xticks([0.9, 0.925, 0.95, 0.975, 1.0])
+
+    if noise_type == "replacement":
+        ax.set_xticks([0.9, 0.925, 0.95, 0.975, 1.0])
+    else:
+        ax.set_xticks([0.85, 0.9, 0.95, 1.0])
+
     ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:g}"))
     ax.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}"))
     ax.legend(frameon=True, handlelength=1.8, loc="upper right")
 
     if panel_label:
         ax.text(
-            -0.18,
-            1.02,
-            panel_label,
+            -0.18, 1.02, panel_label,
             transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontsize=9,
-            clip_on=False,
+            ha="left", va="top",
+            fontsize=9, clip_on=False,
         )
 
 
@@ -108,149 +100,115 @@ def plot_actual_vs_predicted_scatter(
     ax: plt.Axes,
     *,
     csv_path: Path,
-    json_path: Path,
     panel_label: str | None,
     scatter_size: float = 12.0,
     r2_fontsize: int = 8,
     linewidth: float = 1,
+    max_points: int = 100_000,
+    p_label: str = "0.95",
 ) -> None:
-    """Plot predicted vs actual scatter with diagonal and Pearson r annotation."""
-    database = pd.read_json(json_path)
-    fit = database["summary"]["simple_delta_fit_raw"]
-    a = float(fit["a"])
-    b = float(fit["b"])
+    """Plot actual vs predicted scatter with diagonal and R² annotation."""
+    xs, ys = [], []
+    open_fn = gzip.open if str(csv_path).endswith(".gz") else open
+    with open_fn(csv_path, "rt", newline="") as fh:
+        for row in csv.DictReader(fh):
+            xs.append(float(row.get("delta_fit_logit", row["centroid_fit_logit"])))
+            ys.append(float(row["ensemble_mean_logit"]))
+            if len(xs) >= max_points:
+                break
 
-    data = pd.read_csv(csv_path)
-    required_cols = {"empirical_mean", "simple_delta_xstar_x_centered"}
-    missing_cols = required_cols - set(data.columns)
-    if missing_cols:
-        raise ValueError(f"Missing columns in {csv_path}: {sorted(missing_cols)}")
+    xs_arr = np.array(xs, dtype=float)
+    ys_arr = np.array(ys, dtype=float)
 
-    target = data["empirical_mean"].astype(float)
-    delta = data["simple_delta_xstar_x_centered"].astype(float)
-    x = target
-    y = a * delta + b
+    ss_res = float(np.sum((ys_arr - xs_arr) ** 2))
+    ss_tot = float(np.sum((ys_arr - ys_arr.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot
 
-    lo = float(min(x.min(), y.min()))
-    hi = float(max(x.max(), y.max()))
+    lo = float(min(xs_arr.min(), ys_arr.min()))
+    hi = float(max(xs_arr.max(), ys_arr.max()))
     pad = 0.05 * (hi - lo)
     lo -= pad
     hi += pad
 
-    ax.scatter(x, y, s=scatter_size, alpha=0.05, edgecolors="none", color="#E0A01E", rasterized=True)
+    ax.scatter(xs_arr, ys_arr, s=scatter_size, alpha=0.05, edgecolors="none", color="#E0A01E", rasterized=True)
     ax.plot([lo, hi], [lo, hi], color="k", linestyle="--", linewidth=linewidth)
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
-    ax.set_xlabel("Actual outputs")
-    ax.set_ylabel("Predicted outputs")
+    ax.set_xlabel("Predicted outputs")
+    ax.set_ylabel("Actual outputs")
     ax.xaxis.set_major_locator(ticker.MaxNLocator(4))
     ax.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
-    r_value = float(np.corrcoef(x, y)[0, 1])
-    if np.isfinite(r_value):
-        r2_value = r_value ** 2
-        ax.text(
-            -0.5,
-            0.92,
-            rf"$R^2 = {r2_value:.3f}$",
-            fontsize=r2_fontsize,
-        )
-
     ax.text(
-        0.4,
-        0.2,
-        r"$(p = 0.95)$",
+        0.05, 0.95,
+        rf"$R^2 = {r2:.3f}$",
+        transform=ax.transAxes,
+        fontsize=r2_fontsize,
+        va="top",
+    )
+    ax.text(
+        0.4, 0.2,
+        rf"$(p = {p_label})$",
         transform=ax.transAxes,
         va="top",
         fontsize=r2_fontsize,
     )
-        
 
     if panel_label:
         ax.text(
-            -0.18,
-            1.02,
-            panel_label,
+            -0.18, 1.02, panel_label,
             transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontsize=9,
-            clip_on=False,
+            ha="left", va="top",
+            fontsize=9, clip_on=False,
         )
-
-
-def plot_high_noise_figure(
-    *,
-    accuracy_csv: Path,
-    comparison_csv: Path,
-    comparison_json: Path,
-    output_path: Path,
-    activation: str = "erf",
-    baseline: float = 76.42,
-    analytical_csv: Path | None = None,
-) -> None:
-    """Create the combined high-noise figure with two panels."""
-    fig, axes = plt.subplots(1, 2, figsize=(6.75, 2.4), dpi=300, constrained_layout=True)
-
-    plot_accuracy_vs_p(
-        axes[0],
-        csv_path=accuracy_csv,
-        activation=activation,
-        baseline=baseline,
-        panel_label="(a)",
-        analytical_csv=analytical_csv,
-    )
-    plot_actual_vs_predicted_scatter(
-        axes[1],
-        csv_path=comparison_csv,
-        json_path=comparison_json,
-        panel_label="(b)",
-    )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
-    plt.close(fig)
 
 
 def plot_high_noise_single_column(
     *,
     accuracy_csv: Path,
-    comparison_csv: Path,
-    comparison_json: Path,
+    scatter_csv: Path,
     output_path: Path,
-    activation: str = "erf",
-    baseline: float = 76.42,
-    analytical_csv: Path | None = None,
+    noise_type: str = "replacement",
 ) -> None:
     """Create a single-column figure with an inset scatter panel."""
+    df = pd.read_csv(accuracy_csv)
+    subset = df[df["noise_type"] == noise_type]
+    p_label = str(subset["fit_reference_p"].iloc[0])
+
     fig, ax = plt.subplots(figsize=(3.375, 2.4), dpi=300, constrained_layout=True)
 
     plot_accuracy_vs_p(
         ax,
         csv_path=accuracy_csv,
-        activation=activation,
-        baseline=baseline,
+        noise_type=noise_type,
         panel_label=None,
-        analytical_csv=analytical_csv,
     )
-    line = ax.lines[0] if ax.lines else None
-    if line is not None:
-        line.set_clip_on(True)
 
-    ax.set_ylim(0, 80)
+    ax.set_ylim(0, 100)
     ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
-    ax.legend(frameon=True, handlelength=1.6, loc="upper right", bbox_to_anchor=(1.0, 0.96))
+    ax.tick_params(labelsize=9)
+    ax.xaxis.label.set_size(9)
+    ax.yaxis.label.set_size(9)
 
-    inset_ax = ax.inset_axes([0.2, 0.18, 0.3, 0.455])
+    handles, labels = ax.get_legend_handles_labels()
+    order = ["Neural network", "Analytical model"]
+    ordered = [(h, l) for l in order for h, lbl in zip(handles, labels) if lbl == l]
+    h_ord, l_ord = zip(*ordered)
+    ax.legend(h_ord, l_ord, frameon=True, handlelength=1.6, loc="upper right",
+              bbox_to_anchor=(1.0, 1.0))
+
+    # inset_ax = ax.inset_axes([0.2, 0.18, 0.3, 0.455])
+    factor = 1.1
+    inset_ax = ax.inset_axes([0.24, 0.18, 0.3*factor, 0.455*factor])
     plot_actual_vs_predicted_scatter(
         inset_ax,
-        csv_path=comparison_csv,
-        json_path=comparison_json,
+        csv_path=scatter_csv,
         panel_label=None,
-        scatter_size=8.0,
+        scatter_size=4.0,
         r2_fontsize=8,
+        p_label=p_label,
     )
-    inset_ax.tick_params(labelsize=6, pad=1)
+    inset_ax.tick_params(labelsize=7, pad=1)
     inset_ax.xaxis.label.set_size(8)
     inset_ax.yaxis.label.set_size(8)
 
@@ -260,22 +218,33 @@ def plot_high_noise_single_column(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Plot high-noise accuracy figure.")
+    parser.add_argument(
+        "--noise",
+        choices=["replacement", "additive"],
+        default="replacement",
+        help="Noise type to plot (default: replacement)",
+    )
+    args = parser.parse_args()
+
     configure_plot_style()
 
-    repo_root = Path(__file__).resolve().parent.parent
-    accuracy_csv = repo_root / "actual_ vs_predicted_vs_p" / "summary_test_accuracy_by_p_activation.csv"
-    analytical_csv = repo_root / "actual_ vs_predicted_vs_p" / "analytical_abc_accuracy_summary_fit_c.csv"
-    comparison_base = repo_root / "actual_vs_predicted_scatter" / "subset__test=1000"
-    comparison_csv = comparison_base / "per_test_class_comparison.csv"
-    comparison_json = comparison_base / "comparison_database.json"
-    output_path = repo_root / "figures" / "high_noise_accuracy_with_inset.pdf"
+    noise_type = "replacement" if args.noise == "replacement" else "additive_gaussian"
+
+    fig_dir = Path(__file__).resolve().parent.parent / "figure_plotting_05.12"
+    accuracy_csv = fig_dir / "fig2.2" / f"test_accuracy_summary_{noise_type}.csv"
+    scatter_csv = fig_dir / "fig2.1" / f"centroid_comparison_{noise_type}.csv.gz"
+    output_path = (
+        Path(__file__).resolve().parent.parent
+        / "figures"
+        / f"high_noise_accuracy_with_inset_{args.noise}.pdf"
+    )
 
     plot_high_noise_single_column(
         accuracy_csv=accuracy_csv,
-        comparison_csv=comparison_csv,
-        comparison_json=comparison_json,
+        scatter_csv=scatter_csv,
         output_path=output_path,
-        analytical_csv=analytical_csv,
+        noise_type=noise_type,
     )
     print(f"Saved figure to: {output_path}")
 
