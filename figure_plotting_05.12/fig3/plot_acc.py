@@ -61,10 +61,10 @@ plt.rcParams.update(
 plt.figure(figsize=(FIG_WIDTH, FIG_HEIGHT))
 
 styles = [
-    {"color": "#1f77b4", "marker": "o"},
-    {"color": "#d62728", "marker": "s"},
-    {"color": "#2ca02c", "marker": "^"},
-    {"color": "#9467bd", "marker": "D"},
+    {"color": "#1F4E79", "marker": "o"},
+    {"color": "#C76E2B", "marker": "s"},
+    {"color": "#2A7F56", "marker": "^"},
+    {"color": "#8C3B5D", "marker": "D"},
 ]
 
 for i, d_value in enumerate(sorted(df["d"].unique())):
