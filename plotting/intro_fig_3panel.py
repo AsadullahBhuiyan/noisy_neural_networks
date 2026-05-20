@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -54,6 +55,7 @@ def plot_accuracy_with_digit_strip_panel(
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
 	show_digit_markers: bool = False,
 	label_x: float = -0.25,
+	test_only: bool = False,
 ) -> None:
 	"""Plot one accuracy-vs-p panel with noisy digits below the x-axis."""
 	required_cols = {"p", "mean_train_accuracy", "mean_test_accuracy", "std_train_accuracy", "std_test_accuracy"}
@@ -84,36 +86,37 @@ def plot_accuracy_with_digit_strip_panel(
 	)
 
 	ax = fig.add_subplot(inner[0, :])
-	
-	train_mean = 100.0 * df["mean_train_accuracy"]
-	train_std = 100.0 * df["std_train_accuracy"]
-	ax.plot(df["p"], train_mean, marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
-	ax.fill_between(df["p"], train_mean - train_std, train_mean + train_std, color="#1402a0", alpha=0.2, linewidth=0)
-	
+
+	if not test_only:
+		train_mean = 100.0 * df["mean_train_accuracy"]
+		train_std = 100.0 * df["std_train_accuracy"]
+		ax.plot(df["p"], train_mean, marker="o", markersize=3.0, linewidth=1.1, label="Train", c="#1402a0")
+		ax.fill_between(df["p"], train_mean - train_std, train_mean + train_std, color="#1402a0", alpha=0.2, linewidth=0)
+
+	test_color = "#1402a0" if test_only else "#b31b1b"
 	test_mean = 100.0 * df["mean_test_accuracy"]
 	test_std = 100.0 * df["std_test_accuracy"]
-	ax.plot(df["p"], test_mean, marker="o", markersize=3.0, linewidth=1.1, label="Test", c="#b31b1b")
-	ax.fill_between(df["p"], test_mean - test_std, test_mean + test_std, color="#b31b1b", alpha=0.2, linewidth=0)
+	ax.plot(df["p"], test_mean, marker="o", markersize=3.0, linewidth=1.1, label="Test", c=test_color)
+	ax.fill_between(df["p"], test_mean - test_std, test_mean + test_std, color=test_color, alpha=0.2, linewidth=0)
 
 	ax.axhline(10.0, color="0.35", linestyle=":", linewidth=0.9)
 	ax.text(0.48, 13, "Random guess", ha="left", va="bottom", fontsize=8)
 	ax.set_xlabel(r"Corruption probability $p$")
-	
+
 	if show_y_label:
-		ax.set_ylabel("Accuracy (%)")
-		
+		ax.set_ylabel("Test accuracy (%)" if test_only else "Accuracy (%)")
+
 	ax.set_xticks(np.asarray(p_examples, dtype=float))
 	ax.set_ylim(0.0, 105.0)
 	ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 	ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}"))
-	
 
-
-	ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
+	if not test_only:
+		ax.legend(frameon=True, handlelength=1.8, loc="center left", bbox_to_anchor=(0.02, 0.3))
 
 	ax.text(
 		0.05,
-		0.65,
+		0.5 if test_only else 0.65,
 		panel_name,
 		transform=ax.transAxes,
 		ha="left",
@@ -157,6 +160,7 @@ def plot_intro_figure(
 	seed: int = 8,
 	p_examples: tuple[float, ...] = (0.00, 0.25, 0.50, 0.75, 1.00),
 	show_digit_markers: bool = False,
+	test_only: bool = False,
 ) -> None:
 	"""Plot MNIST, FMNIST, and KMNIST corruption figures side by side."""
 	df_all = pd.read_csv(csv_path)
@@ -180,8 +184,9 @@ def plot_intro_figure(
 		p_examples=p_examples,
 		show_digit_markers=show_digit_markers,
 		label_x=-0.26,
+		test_only=test_only,
 	)
-	
+
 	# FMNIST
 	plot_accuracy_with_digit_strip_panel(
 		fig=fig,
@@ -197,6 +202,7 @@ def plot_intro_figure(
 		p_examples=p_examples,
 		show_digit_markers=show_digit_markers,
 		label_x=-0.24,
+		test_only=test_only,
 	)
 
 	# KMNIST
@@ -214,6 +220,7 @@ def plot_intro_figure(
 		p_examples=p_examples,
 		show_digit_markers=show_digit_markers,
 		label_x=-0.24,
+		test_only=test_only,
 	)
 
 	fig.subplots_adjust(left=0.08, right=0.98, bottom=0.15, top=0.9)
@@ -223,6 +230,10 @@ def plot_intro_figure(
 
 
 def main() -> None:
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--test-only", action="store_true", help="Plot test accuracy only (no train curve, no legend, dark blue)")
+	args = parser.parse_args()
+
 	configure_plot_style()
 
 	repo_root = Path(__file__).resolve().parent.parent
@@ -235,6 +246,7 @@ def main() -> None:
 		data_root=data_root,
 		output_path=output_path,
 		seed=8,
+		test_only=args.test_only,
 	)
 	print(f"Saved figure to: {output_path}")
 
