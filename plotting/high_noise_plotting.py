@@ -70,7 +70,7 @@ def plot_accuracy_vs_p(
         linewidth=1.2,
         linestyle="--",
         color="#404040",
-        label="Analytical model",
+        label="Theoretical prediction [Eq. (11)]",
         zorder=3,
     )
     xlabel = r"Corruption probability $p$" if noise_type == "replacement" else r"Corruption strength $p$"
@@ -191,7 +191,7 @@ def plot_high_noise_single_column(
     ax.yaxis.label.set_size(9)
 
     handles, labels = ax.get_legend_handles_labels()
-    order = ["Neural network", "Analytical model"]
+    order = ["Neural network", "Theoretical prediction [Eq. (11)]"]
     ordered = [(h, l) for l in order for h, lbl in zip(handles, labels) if lbl == l]
     h_ord, l_ord = zip(*ordered)
     ax.legend(h_ord, l_ord, frameon=True, handlelength=1.6, loc="upper right",
