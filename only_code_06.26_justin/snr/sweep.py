@@ -1,0 +1,281 @@
+from __future__ import annotations
+
+import itertools
+import json
+import time
+import traceback
+from dataclasses import asdict
+from pathlib import Path
+
+from train_noisy_mlp_ensemble import EnsembleTrainConfig, train_ensemble
+
+
+################################################################################
+# USER INPUTS
+#
+# This script launches many calls to train_noisy_mlp_ensemble.train_ensemble.
+# It trains one full nested ensemble for every Cartesian-product combination
+# below: K noisy training datasets, with M independently initialized networks
+# trained on each fixed noisy dataset.
+#
+# Important: this can get very large. For example,
+#   4 train sizes x 3 image sizes x 3 activations x 3 noise probabilities
+# with NUM_NOISE_DATASETS_PER_COMBO = 100 and
+# NUM_MODELS_PER_NOISE_DATASET = 10 gives 108,000 trained networks.
+################################################################################
+
+DRY_RUN = False
+SKIP_COMPLETED = True
+STOP_ON_ERROR = True
+
+NUM_NOISE_DATASETS_PER_COMBO = 20
+NUM_MODELS_PER_NOISE_DATASET = 10
+NUM_MODELS_PER_COMBO = NUM_NOISE_DATASETS_PER_COMBO * NUM_MODELS_PER_NOISE_DATASET
+SEED = 22334
+NUM_CLASSES = 10
+
+# ws11: cuda:0 gets TRAIN_SIZE=1000
+# ws11: cuda:1 gets TRAIN_SIZE=2000
+# ws12: cuda:0 gets TRAIN_SIZE=3000
+# ws12: cuda:1 gets TRAIN_SIZE=4000
+
+
+DATASETS = ["mnist"]
+TRAIN_SIZES = [4000]
+IMG_HWS = [(28, 28), (43, 43), (55, 55), (64, 64)]
+NOISE_TYPES = ["additive_gaussian", "replacement"]
+NOISE_PROBABILITIES = [0.97]
+
+ACTIVATIONS = ["erf"]
+DEPTHS = [3]
+WIDTHS = [2048]
+WEIGHT_STDS = [1.0]
+BIAS_STDS = [0.0]
+
+EPOCHS = 25
+BATCH_SIZE = 100
+LEARNING_RATE = 1e-4
+OPTIMIZER = "adam"  # adam, adamw, or sgd
+WEIGHT_DECAY = 0.0
+LOSS_NAMES = ["mse"]  # choose from xent or mse
+NUM_WORKERS = 0
+EVAL_BATCH_SIZE = 1024
+SAVE_EVERY = 1
+SAVE_TEST_OUTPUTS = True
+TEST_OUTPUTS_FILENAME = "test_outputs.csv.gz"
+
+DATA_ROOT = "data"
+OUTPUT_ROOT = "trained_mlp_nested_ensembles"
+ALLOW_CPU = False
+MATERIALIZE_NOISY_TRAIN = False
+
+################################################################################
+# END USER INPUTS
+################################################################################
+
+
+FULL_TRAIN_SIZES = {
+    "mnist": 60_000,
+    "fashion_mnist": 60_000,
+    "kmnist": 60_000,
+}
+
+
+def _expected_n_train(dataset: str, train_size: int | None) -> int:
+    from modules.data import normalize_dataset_name
+
+    full_train_size = FULL_TRAIN_SIZES[normalize_dataset_name(dataset)]
+    if train_size is None:
+        return full_train_size
+    return min(int(train_size), full_train_size)
+
+
+def _expected_output_dir(cfg: EnsembleTrainConfig, project_dir: Path) -> Path:
+    from train_noisy_mlp_ensemble import _folder_name, _normalize_ensemble_config
+
+    cfg = _normalize_ensemble_config(cfg)
+    output_root = Path(cfg.output_root)
+    if not output_root.is_absolute():
+        output_root = project_dir / output_root
+    n_train = _expected_n_train(cfg.dataset, cfg.train_size)
+    feature_dim = int(cfg.img_hw[0]) * int(cfg.img_hw[1])
+    return output_root / _folder_name(cfg, n_train=n_train, feature_dim=feature_dim)
+
+
+def _completed_model_count(output_dir: Path) -> int:
+    summary_path = output_dir / "training_summary.json"
+    if not summary_path.exists():
+        return 0
+    try:
+        with summary_path.open("r", encoding="utf-8") as handle:
+            summary = json.load(handle)
+        return len(summary.get("models", []))
+    except Exception:
+        return 0
+
+
+def _iter_configs():
+    for (
+        train_size,
+        dataset,
+        img_hw,
+        noise_type,
+        noise_probability,
+        activation,
+        depth,
+        width,
+        weight_std,
+        bias_std,
+        loss_name,
+    ) in itertools.product(
+        TRAIN_SIZES,
+        DATASETS,
+        IMG_HWS,
+        NOISE_TYPES,
+        NOISE_PROBABILITIES,
+        ACTIVATIONS,
+        DEPTHS,
+        WIDTHS,
+        WEIGHT_STDS,
+        BIAS_STDS,
+        LOSS_NAMES,
+    ):
+        yield EnsembleTrainConfig(
+            num_models=NUM_MODELS_PER_COMBO,
+            num_noise_datasets=NUM_NOISE_DATASETS_PER_COMBO,
+            num_models_per_noise_dataset=NUM_MODELS_PER_NOISE_DATASET,
+            seed=SEED,
+            num_classes=NUM_CLASSES,
+            dataset=dataset,
+            train_size=train_size,
+            img_hw=img_hw,
+            data_root=DATA_ROOT,
+            output_root=OUTPUT_ROOT,
+            noise_type=noise_type,
+            noise_probability=noise_probability,
+            activation=activation,
+            depth=depth,
+            width=width,
+            weight_std=weight_std,
+            bias_std=bias_std,
+            epochs=EPOCHS,
+            batch_size=BATCH_SIZE,
+            lr=LEARNING_RATE,
+            optimizer=OPTIMIZER,
+            weight_decay=WEIGHT_DECAY,
+            loss_name=loss_name,
+            num_workers=NUM_WORKERS,
+            eval_batch_size=EVAL_BATCH_SIZE,
+            save_every=SAVE_EVERY,
+            save_test_outputs=SAVE_TEST_OUTPUTS,
+            test_outputs_filename=TEST_OUTPUTS_FILENAME,
+            allow_cpu=ALLOW_CPU,
+            materialize_noisy_train=MATERIALIZE_NOISY_TRAIN,
+        )
+
+
+def main() -> None:
+    project_dir = Path(__file__).resolve().parent
+    configs = list(_iter_configs())
+    total = len(configs)
+
+    sweep_start = time.perf_counter()
+    print(f"Prepared {total} ensemble-training jobs.", flush=True)
+    print(f"DRY_RUN = {DRY_RUN}", flush=True)
+
+    sweep_records = []
+    for job_index, cfg in enumerate(configs, start=1):
+        output_dir = _expected_output_dir(cfg, project_dir)
+        completed = _completed_model_count(output_dir)
+        record = {
+            "job_index": job_index,
+            "num_jobs": total,
+            "config": asdict(cfg),
+            "output_dir": str(output_dir),
+            "completed_model_count_before": completed,
+            "status": "pending",
+        }
+
+        label = (
+            f"[{job_index}/{total}] "
+            f"dataset={cfg.dataset}, N={cfg.train_size}, d={cfg.img_hw[0]}x{cfg.img_hw[1]}, "
+            f"noise={cfg.noise_type}, p={cfg.noise_probability:g}, "
+            f"loss={cfg.loss_name}, act={cfg.activation}, L={cfg.depth}, width={cfg.width}, "
+            f"K={cfg.num_noise_datasets}, M={cfg.num_models_per_noise_dataset}"
+        )
+        print(label, flush=True)
+        print(f"  output: {output_dir}", flush=True)
+
+        if SKIP_COMPLETED and completed >= int(cfg.num_models):
+            record["status"] = "skipped_completed"
+            sweep_records.append(record)
+            print(f"  skipped: already has {completed}/{cfg.num_models} models", flush=True)
+            continue
+
+        if completed > 0 and completed < int(cfg.num_models):
+            message = (
+                f"Partial run exists with {completed}/{cfg.num_models} completed models. "
+                "The single-ensemble trainer currently starts from model1, so this script "
+                "will not overwrite a partial run automatically."
+            )
+            record["status"] = "partial_existing"
+            record["error"] = message
+            sweep_records.append(record)
+            print(f"  blocked: {message}", flush=True)
+            if STOP_ON_ERROR:
+                break
+            continue
+
+        if DRY_RUN:
+            record["status"] = "dry_run"
+            sweep_records.append(record)
+            continue
+
+        try:
+            job_start = time.perf_counter()
+            actual_output_dir = train_ensemble(cfg, project_dir)
+            record["status"] = "completed"
+            record["actual_output_dir"] = str(actual_output_dir)
+            record["elapsed_seconds"] = time.perf_counter() - job_start
+            sweep_records.append(record)
+        except Exception as exc:
+            record["status"] = "failed"
+            record["error"] = repr(exc)
+            record["traceback"] = traceback.format_exc()
+            sweep_records.append(record)
+            print(record["traceback"], flush=True)
+            if STOP_ON_ERROR:
+                break
+
+        sweep_log_path = project_dir / OUTPUT_ROOT / "sweep_log.json"
+        sweep_log_path.parent.mkdir(parents=True, exist_ok=True)
+        sweep_log_path.write_text(
+            json.dumps(
+                {
+                    "dry_run": DRY_RUN,
+                    "elapsed_seconds": time.perf_counter() - sweep_start,
+                    "records": sweep_records,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    sweep_log_path = project_dir / OUTPUT_ROOT / "sweep_log.json"
+    sweep_log_path.parent.mkdir(parents=True, exist_ok=True)
+    sweep_log_path.write_text(
+        json.dumps(
+            {
+                "dry_run": DRY_RUN,
+                "elapsed_seconds": time.perf_counter() - sweep_start,
+                "records": sweep_records,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"Saved sweep log to {sweep_log_path}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
