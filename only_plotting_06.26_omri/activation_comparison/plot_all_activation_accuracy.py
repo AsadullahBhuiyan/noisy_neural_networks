@@ -1,20 +1,33 @@
 from __future__ import annotations
 
 import csv
-import os
 from pathlib import Path
 
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib-jt577")
-
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FixedLocator, FixedFormatter
+import matplotlib.ticker as ticker
 
 
-# -----------------------------------------------------------------------------
-# Easy-to-edit settings
-# -----------------------------------------------------------------------------
+def configure_plot_style() -> None:
+    plt.rcParams.update(
+        {
+            "figure.dpi": 300,
+            "savefig.dpi": 300,
+            "font.family": "CMU Sans Serif",
+            "font.size": 9,
+            "axes.labelsize": 9,
+            "axes.titlesize": 9,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "legend.fontsize": 7,
+            "text.usetex": False,
+            "axes.unicode_minus": False,
+            "mathtext.fontset": "custom",
+            "mathtext.rm": "CMU Sans Serif",
+            "mathtext.it": "CMU Sans Serif:italic",
+            "mathtext.bf": "CMU Sans Serif:bold",
+        }
+    )
+
 
 HERE = Path(__file__).resolve().parent
 JUSTIN_ROOT = HERE.parent.parent / "only_plotting_06.26_justin" / "activation_comparison"
@@ -22,8 +35,6 @@ SUMMARY_CSV = JUSTIN_ROOT / "test_accuracy_eval" / "summary_test_accuracy_by_p_a
 
 P_MIN = 0.90
 P_MAX = 1.00
-SAVE_PDF = True
-SAVE_PNG = True
 
 ACTIVATION_ORDER = ["erf", "gelu", "swish", "tanh"]
 ACTIVATION_LABELS = {
@@ -46,20 +57,7 @@ MARKERS = {
 }
 
 
-plt.rcParams.update(
-    {
-        "font.family": "DejaVu Sans",
-        "font.size": 17,
-        "axes.linewidth": 1.8,
-        "xtick.major.width": 1.7,
-        "ytick.major.width": 1.7,
-        "xtick.major.size": 6,
-        "ytick.major.size": 6,
-        "pdf.fonttype": 42,
-        "ps.fonttype": 42,
-    }
-)
-
+configure_plot_style()
 
 rows = []
 with SUMMARY_CSV.open("r", newline="", encoding="utf-8") as handle:
@@ -78,14 +76,16 @@ with SUMMARY_CSV.open("r", newline="", encoding="utf-8") as handle:
             }
         )
 
-
 for dataset, noise_type in sorted({(row["dataset"], row["noise_type"]) for row in rows}):
     plot_rows = [row for row in rows if row["dataset"] == dataset and row["noise_type"] == noise_type]
 
-    fig, ax = plt.subplots(figsize=(5.45, 3.55))
+    fig, ax = plt.subplots(figsize=(3.375, 2.4), dpi=300, constrained_layout=True)
 
     for activation in ACTIVATION_ORDER:
-        subrows = sorted([row for row in plot_rows if row["activation"] == activation], key=lambda row: row["p"])
+        subrows = sorted(
+            [row for row in plot_rows if row["activation"] == activation],
+            key=lambda r: r["p"],
+        )
         if not subrows:
             continue
 
@@ -93,38 +93,29 @@ for dataset, noise_type in sorted({(row["dataset"], row["noise_type"]) for row i
             [row["p"] for row in subrows],
             [row["mean_accuracy_percent"] for row in subrows],
             yerr=[row["std_accuracy_percent"] for row in subrows],
-            fmt=f"{MARKERS[activation]}-",
+            marker=MARKERS[activation],
+            markersize=3.5,
+            linewidth=1.2,
+            capsize=2.5,
             color=COLORS[activation],
-            ecolor=COLORS[activation],
-            elinewidth=1.9,
-            capsize=3.5,
-            markersize=6.2,
-            linewidth=2.2,
             label=ACTIVATION_LABELS[activation],
         )
 
-    ax.set_xlabel(r"Corruption probability $p$", fontsize=13)
-    ax.set_ylabel("Test accuracy (%)", fontsize=13)
+    xlabel = (
+        r"Corruption probability $p$"
+        if noise_type == "replacement"
+        else r"Corruption strength $p$"
+    )
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Test accuracy (%)")
     ax.set_xlim(P_MIN - 0.006, P_MAX + 0.006)
     ax.set_ylim(6, 82)
-    ax.xaxis.set_major_locator(FixedLocator([0.90, 0.92, 0.94, 0.96, 0.98, 1.00]))
-    ax.xaxis.set_major_formatter(FixedFormatter(["0.9", "0.92", "0.94", "0.96", "0.98", "1"]))
-    ax.tick_params(labelsize=12)
-    ax.legend(
-        fontsize=12,
-        loc="lower left",
-        frameon=True,
-        borderpad=0.45,
-        handlelength=2.0,
-    )
+    ax.xaxis.set_major_locator(ticker.FixedLocator([0.90, 0.92, 0.94, 0.96, 0.98, 1.00]))
+    ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:g}"))
+    ax.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}"))
+    ax.legend(loc="lower left", frameon=True, handlelength=1.8)
 
-    fig.tight_layout(pad=0.65)
-
-    output_stem = HERE / f"activation_accuracy_vs_p__dataset={dataset}__noise={noise_type}"
-    if SAVE_PDF:
-        fig.savefig(output_stem.with_suffix(".pdf"), bbox_inches="tight")
-        print(f"Wrote {output_stem.with_suffix('.pdf')}")
-    if SAVE_PNG:
-        fig.savefig(output_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
-        print(f"Wrote {output_stem.with_suffix('.png')}")
+    output_path = HERE / f"activation_accuracy_vs_p__dataset={dataset}__noise={noise_type}.pdf"
+    fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
     plt.close(fig)
+    print(f"Wrote {output_path}")

@@ -1,19 +1,33 @@
 from __future__ import annotations
 
-import os
 import csv
 from pathlib import Path
 
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib-jt577")
-
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 
-# -----------------------------------------------------------------------------
-# Easy-to-edit settings
-# -----------------------------------------------------------------------------
+def configure_plot_style() -> None:
+    plt.rcParams.update(
+        {
+            "figure.dpi": 300,
+            "savefig.dpi": 300,
+            "font.family": "CMU Sans Serif",
+            "font.size": 9,
+            "axes.labelsize": 9,
+            "axes.titlesize": 9,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "legend.fontsize": 7,
+            "text.usetex": False,
+            "axes.unicode_minus": False,
+            "mathtext.fontset": "custom",
+            "mathtext.rm": "CMU Sans Serif",
+            "mathtext.it": "CMU Sans Serif:italic",
+            "mathtext.bf": "CMU Sans Serif:bold",
+        }
+    )
+
 
 HERE = Path(__file__).resolve().parent
 JUSTIN_SNR_ROOT = HERE.parent.parent / "only_plotting_06.26_justin" / "snr"
@@ -25,20 +39,7 @@ COLORS = ["#2b5f8f", "#dd7f29", "#3a945c", "#a33f6f"]
 MARKERS = ["o", "s", "^", "D"]
 
 
-plt.rcParams.update(
-    {
-        "font.family": "DejaVu Sans",
-        "font.size": 15,
-        "axes.linewidth": 1.7,
-        "xtick.major.width": 1.5,
-        "ytick.major.width": 1.5,
-        "xtick.major.size": 5.5,
-        "ytick.major.size": 5.5,
-        "pdf.fonttype": 42,
-        "ps.fonttype": 42,
-    }
-)
-
+configure_plot_style()
 
 for noise_type in NOISE_TYPES:
     rows = []
@@ -60,46 +61,33 @@ for noise_type in NOISE_TYPES:
                 }
             )
 
-    fig, ax = plt.subplots(figsize=(5.25, 3.65))
+    fig, ax = plt.subplots(figsize=(3.375, 2.4), dpi=300, constrained_layout=True)
 
     for i, d_value in enumerate(sorted({row["d"] for row in rows})):
-        subdf = sorted([row for row in rows if row["d"] == d_value], key=lambda row: row["N"])
+        subdf = sorted([row for row in rows if row["d"] == d_value], key=lambda r: r["N"])
         d_label = subdf[0]["d_label"]
 
         ax.errorbar(
             [row["N"] for row in subdf],
             [100.0 * row["mean_model_accuracy"] for row in subdf],
             yerr=[100.0 * row["std_model_accuracy"] for row in subdf],
-            fmt=f"{MARKERS[i]}-",
+            marker=MARKERS[i],
+            markersize=3.5,
+            linewidth=1.2,
+            capsize=2.5,
             color=COLORS[i],
-            ecolor=COLORS[i],
-            elinewidth=1.8,
-            capsize=3.5,
-            markersize=6.0,
-            linewidth=2.0,
             label=fr"$d = {d_label}$",
         )
 
-    ax.set_xlabel(r"$N$", fontsize=14)
-    ax.set_ylabel("Test accuracy (%)", fontsize=14)
-    ax.tick_params(labelsize=13)
+    ax.set_xlabel(r"$N$")
+    ax.set_ylabel("Test accuracy (%)")
     ax.set_xticks(sorted({row["N"] for row in rows}))
+    ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:g}"))
+    ax.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}"))
     ax.set_ylim(10, 75)
-    ax.legend(
-        fontsize=12,
-        loc="lower right",
-        frameon=True,
-        borderpad=0.45,
-        handlelength=2.0,
-    )
+    ax.legend(loc="lower right", frameon=True, handlelength=1.8)
 
-    output_pdf = HERE / f"mean_test_accuracy_vs_N_fixed_d__noise={noise_type}.pdf"
-    output_png = HERE / f"mean_test_accuracy_vs_N_fixed_d__noise={noise_type}.png"
-
-    fig.tight_layout(pad=0.65)
-    fig.savefig(output_pdf, bbox_inches="tight")
-    fig.savefig(output_png, dpi=300, bbox_inches="tight")
+    output_path = HERE / f"mean_test_accuracy_vs_N_fixed_d__noise={noise_type}.pdf"
+    fig.savefig(output_path, bbox_inches="tight", pad_inches=0.04)
     plt.close(fig)
-
-    print(f"Wrote {output_pdf}")
-    print(f"Wrote {output_png}")
+    print(f"Wrote {output_path}")

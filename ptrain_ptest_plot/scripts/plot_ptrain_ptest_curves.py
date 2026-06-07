@@ -108,12 +108,17 @@ def draw_curves_panel(
     cmap,
     x_label: str,
     cbar_label: str,
+    show_max: bool = False,
 ) -> None:
     for g in group_vals:
         points = series[float(g)]
         xs = np.array([x for x, _, _ in points])
         ys = 100.0 * np.array([acc for _, acc, _ in points])
-        ax.plot(xs, ys, color=cmap(norm(float(g))), linewidth=0.8)
+        color = cmap(norm(float(g)))
+        ax.plot(xs, ys, color=color, linewidth=0.8)
+        if show_max:
+            best = int(np.argmax(ys))
+            ax.scatter(xs[best], ys[best], color=color, s=12, zorder=5, linewidths=0)
 
     ax.set_xlabel(x_label)
     ax.set_ylabel("Test accuracy (%)")
@@ -187,7 +192,8 @@ def make_plot(
                              gridspec_kw={"wspace": 0.05} if sbs else {})
     ax_curves = axes[0] if sbs else axes
 
-    draw_curves_panel(ax_curves, fig, series, group_vals, norm, cmap, x_label, cbar_label)
+    draw_curves_panel(ax_curves, fig, series, group_vals, norm, cmap, x_label, cbar_label,
+                      show_max=(mode == "vs-p-train"))
     if sbs:
         draw_auc_panel(axes[1], rows)
         for ax, label in zip(axes, ("(a)", "(b)")):
