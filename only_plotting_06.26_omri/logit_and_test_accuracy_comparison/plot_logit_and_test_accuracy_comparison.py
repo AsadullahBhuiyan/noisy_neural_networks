@@ -120,7 +120,7 @@ for noise_type in NOISE_TYPES:
             linestyle="--",
             linewidth=1.2,
             color=THEORY_GRAY,
-            label="Theoretical prediction [Eq. (11)]",
+            label="Theoretical prediction [Eq. (16)]",
             zorder=2,
         )
 
@@ -140,7 +140,7 @@ for noise_type in NOISE_TYPES:
         if ax is axes[0]:
             ax.set_ylabel("Test accuracy (%)")
         handles, labels = ax.get_legend_handles_labels()
-        order = ["Neural network", "Theoretical prediction [Eq. (11)]"]
+        order = ["Neural network", "Theoretical prediction [Eq. (16)]"]
         pairs = [(h, l) for l in order for h, lbl in zip(handles, labels) if lbl == l]
         ax.legend(*zip(*pairs), frameon=True, handlelength=1.8, loc="upper right")
         ax.text(
