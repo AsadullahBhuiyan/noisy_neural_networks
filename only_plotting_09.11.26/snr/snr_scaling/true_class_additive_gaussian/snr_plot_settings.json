@@ -1,0 +1,15 @@
+{
+  "marker": "square",
+  "error_bars": "Plus/minus one sample standard deviation of log SNR across test points",
+  "error_bar_linewidth": 0.9,
+  "error_bar_capsize": 3,
+  "error_bar_capthick": 0.9,
+  "error_bar_ddof": 1,
+  "axis_label_fontsize": 26,
+  "tick_fontsize": 20,
+  "legend_fontsize": 17,
+  "fitted_line_style": "dashed",
+  "fitted_slope_legend_decimals": 2,
+  "equal_axis_scaling": true,
+  "means_and_fits": "All valid sampled test points"
+}

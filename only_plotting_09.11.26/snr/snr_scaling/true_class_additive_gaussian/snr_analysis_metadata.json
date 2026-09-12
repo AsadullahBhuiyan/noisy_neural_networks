@@ -1,0 +1,34 @@
+{
+  "root": "/data2/jt577/2026/papers/noisy_networks/06.2026/fig3/trained_mlp_nested_ensembles",
+  "seed": 22334,
+  "requested_num_test_points": 500,
+  "output": "true_class",
+  "variance_ddof": 1,
+  "logarithm": "natural",
+  "conditions": {
+    "fec24f952537": {
+      "dataset": "mnist",
+      "noise_type": "additive_gaussian",
+      "noise_probability": 0.97,
+      "activation": "erf",
+      "depth": 3,
+      "width": 2048,
+      "weight_std": 1.0,
+      "bias_std": 0.0,
+      "epochs": 25,
+      "batch_size": 100,
+      "lr": 0.0001,
+      "optimizer": "adam",
+      "weight_decay": 0.0,
+      "loss_name": "mse",
+      "num_classes": 10,
+      "seed": 22334,
+      "num_noise_datasets": 20,
+      "num_models_per_noise_dataset": 10,
+      "test_is_clean": true,
+      "normalization": "Each train/test example is mean-centered across features and normalized to centered unit RMS. Replacement noise swaps each feature with normalized-scale uniform noise with probability p. Additive Gaussian noise uses (1 - p) * clean + p * noise. Noisy training examples are not normalized again."
+    }
+  },
+  "estimator": "mean_k(mean_m(output))^2 / sample_var_k(mean_m(output))",
+  "fit": "Equal-weight OLS on folder mean log SNR; descriptive, no independence-based p-values"
+}

@@ -1,0 +1,2 @@
+group_id,noise_type,num_folders,num_valid_points,slope,intercept,r_squared,slope_1_intercept,separate_N_exponent,separate_d_exponent,separate_intercept
+fec24f952537,additive_gaussian,16,8000,1.0296850118434875,-12.494100626517055,0.944349606428925,-12.038967674360682,0.7881714735190712,1.1970088632687619,-11.91054772049811
